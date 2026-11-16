@@ -43,7 +43,8 @@ int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
 	 */
 	start->tp = (flags & CLONE_SETTLS) ? (uintptr_t)tls : __get_tp();
 
-	return __syscall(SYS_clone, flags, start, ptid, tls, ctid);
+	/* Kernel argument order: flags, stack, parent_tid, child_tid, tls. */
+	return __syscall(SYS_clone, flags, start, ptid, ctid, tls);
 }
 
 __attribute__((__export_name__("__clone_entry")))
