@@ -5,11 +5,12 @@ the place where its port to the
 [linux-wasm kernel](https://github.com/linux-wasm/linux) will live.
 
 **Status: first programs run.** `arch/wasm32` exists; a static `libc.a`
-builds with stock clang 19, and C programs have run as `/init` on the
-kernel using `printf` (including floating point), `malloc`, `uname`,
-`getpid`, `posix_spawn` + `waitpid` (child with arguments and environment,
-exit status collected) and `reboot`. Nothing else has been tested: no test
-suite has been run, and threads, files, sockets and locale are untried.
+builds with stock clang 19. Exercised on the kernel by the distro's demo
+init and `selftest` program: stdio and `printf` (including floating
+point), `malloc`, files and directories (with 64-bit offsets), pipes,
+`posix_spawn` + `waitpid`, `setjmp`/`longjmp`, clocks and `nanosleep`,
+and pthreads (create, join, mutex). No libc test suite has been run;
+sockets, locale, signals and most of the rest are untried.
 
 ## Building
 
@@ -20,13 +21,14 @@ By hand, with clang/llvm 19:
 
 ```sh
 CC="clang --target=wasm32-unknown-unknown" AR=llvm-ar RANLIB=llvm-ranlib \
-CFLAGS="-fPIC -matomics -mbulk-memory -O2" LIBCC=" " \
+CFLAGS="-fPIC -matomics -mbulk-memory -mexception-handling -O2" LIBCC=" " \
   ./configure --target=wasm32 --prefix=/ --disable-shared
 make && make install DESTDIR=/path/to/sysroot
 ```
 
-A program is then compiled with `-fPIC -matomics -mbulk-memory` and linked
-as a position-independent module:
+A program is then compiled with `-fPIC -matomics -mbulk-memory
+-mexception-handling -mllvm -wasm-enable-sjlj` (the last two make
+`setjmp`/`longjmp` work) and linked as a position-independent module:
 
 ```sh
 wasm-ld -pie --experimental-pic --no-entry \
@@ -40,7 +42,9 @@ kernel: see `arch/wasm/kernel/binfmt_wasm.c` in linux-wasm/linux.
 
 ## What is stubbed (`FIXME(wasm)` in the source)
 
-- `setjmp`/`longjmp`/`sigsetjmp`: `setjmp` returns 0, `longjmp` traps.
+- `setjmp`/`longjmp` only work in code compiled with `-mllvm
+  -wasm-enable-sjlj`; `sigsetjmp` and `_setjmp` do not work at all (they
+  return 0 and a later jump ends the program).
 - Signal handlers never run (kernel limitation), so the signal return
   trampolines are unreachable and `pthread_cancel` cannot interrupt a thread
   that is blocked in a system call.
