@@ -1,9 +1,11 @@
 #include <setjmp.h>
 
-/* FIXME(wasm): see setjmp.c. */
+_Noreturn void __wasm_longjmp(void *, int);
+
+/* See setjmp.c. */
 _Noreturn void longjmp(jmp_buf env, int val)
 {
-	for (;;) __builtin_trap();
+	__wasm_longjmp(env, val);
 }
 
 weak_alias(longjmp, _longjmp);
