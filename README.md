@@ -9,9 +9,10 @@ builds with stock clang 19. Exercised on the kernel by the distro's demo
 init and `selftest` program: stdio and `printf` (including floating
 point), `malloc`, files and directories (with 64-bit offsets), pipes,
 `posix_spawn` + `waitpid`, `vfork` (with `_exit` and with `execl`),
-`setjmp`/`longjmp`, clocks and `nanosleep`,
+`setjmp`/`longjmp`, clocks and `nanosleep`, signals (`sigaction`,
+`raise`, `kill`, `sigprocmask`, `setitimer`, `longjmp` out of a handler),
 and pthreads (create, join, mutex). No libc test suite has been run;
-sockets, locale, signals and most of the rest are untried.
+sockets, locale and most of the rest are untried.
 
 ## Building
 
@@ -46,9 +47,15 @@ kernel: see `arch/wasm/kernel/binfmt_wasm.c` in linux-wasm/linux.
 - `setjmp`/`longjmp` only work in code compiled with `-mllvm
   -wasm-enable-sjlj`; `sigsetjmp` and `_setjmp` do not work at all (they
   return 0 and a later jump ends the program).
-- Signal handlers never run (kernel limitation), so the signal return
-  trampolines are unreachable and `pthread_cancel` cannot interrupt a thread
-  that is blocked in a system call.
+- `sigsetjmp` is not a working `setjmp` (see above), so `siglongjmp` out
+  of a signal handler does not work; `setjmp`/`longjmp` does.
+- A signal handler runs when a system call returns (the kernel calls it;
+  there is no `sa_restorer` and no sigreturn trampoline), so a thread that
+  computes without system calls sees no signals. The handler's `ucontext_t`
+  has no program counter: `uc_mcontext` describes the interrupted system
+  call. `sigaltstack` is accepted and ignored.
+- `pthread_cancel` cannot interrupt a thread that is blocked in a system
+  call; the thread is cancelled at its next cancellation point.
 - `fork()` fails with `EINVAL`: the kernel cannot copy an address space.
   `posix_spawn` and `vfork()` work. `vfork()` is a macro around `setjmp`
   (see `src/process/wasm32/vfork.c`), so its callers need the sjlj compiler
