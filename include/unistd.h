@@ -163,6 +163,20 @@ unsigned ualarm(unsigned, unsigned);
 int brk(void *);
 void *sbrk(intptr_t);
 pid_t vfork(void);
+#ifdef __wasm__
+/*
+ * On Linux/wasm the child of vfork() runs on the parent's thread and the
+ * parent resumes when the child calls execve() or _exit(), by jumping back
+ * to the vfork() call. Only setjmp() can mark that place, and it has to be
+ * called from the function that calls vfork(), hence a macro. Code using
+ * it must be compiled with -mexception-handling -mllvm -wasm-enable-sjlj.
+ */
+#include <setjmp.h>
+jmp_buf *__vfork_jmp_buf(void);
+pid_t __vfork_start(void);
+pid_t __vfork_result(void);
+#define vfork() (setjmp(*__vfork_jmp_buf()) ? __vfork_result() : __vfork_start())
+#endif
 int vhangup(void);
 int chroot(const char *);
 int getpagesize(void);

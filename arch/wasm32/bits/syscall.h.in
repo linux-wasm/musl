@@ -320,3 +320,6 @@
  * generic code falls back to it when the time64 call fails with ENOSYS.
  */
 #define __NR_nanosleep 101
+
+/* Linux/wasm only: vfork on the caller's thread, see src/process/wasm32. */
+#define __NR_wasm_vfork 244
