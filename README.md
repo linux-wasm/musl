@@ -8,7 +8,8 @@ the place where its port to the
 builds with stock clang 19. Exercised on the kernel by the distro's demo
 init and `selftest` program: stdio and `printf` (including floating
 point), `malloc`, files and directories (with 64-bit offsets), pipes,
-`posix_spawn` + `waitpid`, `setjmp`/`longjmp`, clocks and `nanosleep`,
+`posix_spawn` + `waitpid`, `vfork` (with `_exit` and with `execl`),
+`setjmp`/`longjmp`, clocks and `nanosleep`,
 and pthreads (create, join, mutex). No libc test suite has been run;
 sockets, locale, signals and most of the rest are untried.
 
@@ -48,9 +49,11 @@ kernel: see `arch/wasm/kernel/binfmt_wasm.c` in linux-wasm/linux.
 - Signal handlers never run (kernel limitation), so the signal return
   trampolines are unreachable and `pthread_cancel` cannot interrupt a thread
   that is blocked in a system call.
-- `fork()` fails (the kernel requires `CLONE_VM` and an entry function) and
-  `vfork()` falls back to it (`EINVAL`). Use `posix_spawn`, which is built
-  on `__clone` with an entry function and works.
+- `fork()` fails with `EINVAL`: the kernel cannot copy an address space.
+  `posix_spawn` and `vfork()` work. `vfork()` is a macro around `setjmp`
+  (see `src/process/wasm32/vfork.c`), so its callers need the sjlj compiler
+  flags, a vfork child cannot vfork again, and two threads must not vfork
+  at the same time.
 - `main(int, char **, char **)` (three arguments) does not link.
 - No dynamic linking (`--disable-shared` only), no `dlopen`.
 - `brk` is not available in the kernel; `malloc` uses `mmap`.
