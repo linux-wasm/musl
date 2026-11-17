@@ -16,5 +16,9 @@ static inline uintptr_t __get_tp()
 #define TLS_ABOVE_TP
 #define GAP_ABOVE_TP 0
 
-/* No program counter in the signal context; see bits/signal.h. */
-#define MC_PC __pc
+/*
+ * No program counter in the signal context (see bits/signal.h). The
+ * cancellation handler compares this with code addresses, which a system
+ * call number never matches.
+ */
+#define MC_PC __syscall_nr

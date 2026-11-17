@@ -7,12 +7,15 @@
 #endif
 
 /*
- * A wasm thread has no registers the kernel could save. The context only
- * exists so that the usual signal API compiles; __pc is always 0.
+ * A wasm thread has no registers the kernel could save, and a signal
+ * handler only ever runs when a system call is about to return. The
+ * context is that system call (the kernel's struct pt_regs); there is no
+ * program counter.
  */
 typedef struct mcontext_t {
-	unsigned long __pc;
-	unsigned long __reserved[7];
+	long __syscall_nr;
+	unsigned long __syscall_args[6];
+	long __syscall_ret;
 } mcontext_t;
 
 #if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
@@ -34,8 +37,8 @@ typedef struct __ucontext
 	unsigned long uc_flags;
 	struct __ucontext *uc_link;
 	stack_t uc_stack;
-	sigset_t uc_sigmask;
 	mcontext_t uc_mcontext;
+	sigset_t uc_sigmask;
 } ucontext_t;
 
 #define SA_NOCLDSTOP 1
@@ -45,7 +48,6 @@ typedef struct __ucontext
 #define SA_RESTART   0x10000000
 #define SA_NODEFER   0x40000000
 #define SA_RESETHAND 0x80000000
-#define SA_RESTORER  0x04000000
 
 #endif
 
