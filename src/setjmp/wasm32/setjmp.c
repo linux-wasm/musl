@@ -20,8 +20,8 @@
  * A translation unit compiled WITHOUT those flags calls the plain setjmp()
  * below instead. FIXME(wasm): that reports the direct return and a later
  * longjmp() to it ends the program with an uncaught exception.
- * sigsetjmp() and _setjmp() are not recognised by the compiler and behave
- * the same way.
+ * sigsetjmp() and _setjmp() are not recognised by the compiler either;
+ * <setjmp.h> makes them macros around setjmp().
  */
 struct wasm_jmp_buf {
 	void *invocation;

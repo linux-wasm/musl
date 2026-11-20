@@ -45,10 +45,12 @@ kernel: see `arch/wasm/kernel/binfmt_wasm.c` in linux-wasm/linux.
 ## What is stubbed (`FIXME(wasm)` in the source)
 
 - `setjmp`/`longjmp` only work in code compiled with `-mllvm
-  -wasm-enable-sjlj`; `sigsetjmp` and `_setjmp` do not work at all (they
-  return 0 and a later jump ends the program).
-- `sigsetjmp` is not a working `setjmp` (see above), so `siglongjmp` out
-  of a signal handler does not work; `setjmp`/`longjmp` does.
+  -wasm-enable-sjlj`, because the compiler implements them, and it only
+  recognises calls to `setjmp`. `sigsetjmp` and `_setjmp` are therefore
+  macros around `setjmp` in `<setjmp.h>` (`sigsetjmp` saves the signal
+  mask first, `siglongjmp` restores it before jumping; bash relies on
+  this). Called as functions, without the header or through a pointer,
+  they return 0 and a later jump ends the program.
 - A signal handler runs when a system call returns (the kernel calls it;
   there is no `sa_restorer` and no sigreturn trampoline), so a thread that
   computes without system calls sees no signals. The handler's `ucontext_t`
@@ -66,7 +68,6 @@ kernel: see `arch/wasm/kernel/binfmt_wasm.c` in linux-wasm/linux.
   (see `src/process/wasm32/vfork.c`), so its callers need the sjlj compiler
   flags, a vfork child cannot vfork again, and two threads must not vfork
   at the same time.
-- `main(int, char **, char **)` (three arguments) does not link.
 - No dynamic linking (`--disable-shared` only), no `dlopen`.
 - `brk` is not available in the kernel; `malloc` uses `mmap`.
 

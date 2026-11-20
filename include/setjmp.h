@@ -40,6 +40,26 @@ _Noreturn void longjmp (jmp_buf, int);
 
 #define setjmp setjmp
 
+#ifdef __wasm__
+/*
+ * On wasm the compiler implements setjmp by rewriting the calling function,
+ * and it only does so for calls to a function named setjmp. The other
+ * entry points are therefore macros around it; what sigsetjmp adds, the
+ * signal mask, is saved by a helper and restored by siglongjmp.
+ */
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) \
+ || defined(_XOPEN_SOURCE) || defined(_GNU_SOURCE) \
+ || defined(_BSD_SOURCE)
+int __sigsetjmp_save (sigjmp_buf, int);
+#define sigsetjmp(env, savemask) \
+	(__sigsetjmp_save((env), (savemask)), setjmp(env))
+#endif
+#if defined(_XOPEN_SOURCE) || defined(_GNU_SOURCE) \
+ || defined(_BSD_SOURCE)
+#define _setjmp(env) setjmp(env)
+#endif
+#endif
+
 #undef __setjmp_attr
 
 #ifdef __cplusplus

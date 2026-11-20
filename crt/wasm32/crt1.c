@@ -8,8 +8,8 @@
  * functions are typed and a caller must know which one it is calling:
  * main(int, char **) becomes __main_argc_argv and main(void) becomes
  * __main_void. libc supplies a weak __main_argc_argv that calls
- * __main_void (src/env/wasm32/__main_void.c), so both forms link.
- * FIXME(wasm): main(int, char **, char **) is not supported.
+ * __main_void (src/env/wasm32/__main_void.c), and a __main_void that
+ * calls a main(int, char **, char **) (__main_envp.c), so all forms link.
  */
 int __main_argc_argv(int, char **);
 
