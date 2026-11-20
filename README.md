@@ -8,7 +8,7 @@ the place where its port to the
 builds with stock clang 19. Exercised on the kernel by the distro's demo
 init and `selftest` program: stdio and `printf` (including floating
 point), `malloc`, files and directories (with 64-bit offsets), pipes,
-`posix_spawn` + `waitpid`, `vfork` (with `_exit` and with `execl`),
+`posix_spawn` + `waitpid`, `fork`, `vfork` (with `_exit` and with `execl`),
 `setjmp`/`longjmp`, clocks and `nanosleep`, signals (`sigaction`,
 `raise`, `kill`, `sigprocmask`, `setitimer`, `longjmp` out of a handler),
 and pthreads (create, join, mutex). No libc test suite has been run;
@@ -56,8 +56,13 @@ kernel: see `arch/wasm/kernel/binfmt_wasm.c` in linux-wasm/linux.
   call. `sigaltstack` is accepted and ignored.
 - `pthread_cancel` cannot interrupt a thread that is blocked in a system
   call; the thread is cancelled at its next cancellation point.
-- `fork()` fails with `EINVAL`: the kernel cannot copy an address space.
-  `posix_spawn` and `vfork()` work. `vfork()` is a macro around `setjmp`
+- `fork()` works in programs that were run through Binaryen's Asyncify
+  pass after linking (`wasm-opt --asyncify
+  --pass-arg=asyncify-imports@linux.fork`; distro's `wasm-cc` does it),
+  and returns `ENOSYS` in others and in signal handlers. The call stack
+  that forks must fit into a 256 KiB buffer (`src/process/wasm32/_Fork.c`).
+  Not tried in a process with several threads.
+  `posix_spawn` and `vfork()` work too. `vfork()` is a macro around `setjmp`
   (see `src/process/wasm32/vfork.c`), so its callers need the sjlj compiler
   flags, a vfork child cannot vfork again, and two threads must not vfork
   at the same time.
